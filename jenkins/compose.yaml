@@ -1,0 +1,23 @@
+# docker compose -f jenkins/compose.yaml up -d --build
+# Create the kind cluster first: Jenkins joins its `kind` network so it can
+# reach the API server at saiddit-control-plane:6443.
+name: saiddit-jenkins
+
+services:
+  jenkins:
+    build: .
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - kind
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
+
+networks:
+  kind:
+    external: true

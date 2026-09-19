@@ -1,0 +1,12 @@
+env/
+.venv/
+.claude/
+.env*
+
+**/.env*
+**/node_modules/
+**/env/
+**/.venv/
+**/.claude/
+
+!**/.env_example

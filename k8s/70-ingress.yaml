@@ -1,0 +1,40 @@
+# One host for both, so the SPA calls the API same-origin.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: saiddit
+  namespace: saiddit
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: saiddit.localhost
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

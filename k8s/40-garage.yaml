@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: garage-config
+  namespace: saiddit
+type: Opaque
+stringData:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    db_engine = "sqlite"
+
+    replication_factor = 1
+
+    rpc_bind_addr = "[::]:3901"
+    rpc_public_addr = "127.0.0.1:3901"
+    rpc_secret = "d6c41e439f83070e058d6e218f856d2ee3a526037c30cb12eb73b2ad04fffacc"
+
+    [s3_api]
+    s3_region = "garage"
+    api_bind_addr = "[::]:3900"
+    root_domain = ".s3.garage.localhost"
+
+    [admin]
+    api_bind_addr = "[::]:3903"
+    admin_token = "decf182593f92e325c99b244723e6d8545e865fc2c7cfaf66f724bdcb46ad421"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage
+  namespace: saiddit
+spec:
+  selector:
+    app: garage
+  ports:
+    - name: s3
+      port: 3900
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: garage
+  namespace: saiddit
+spec:
+  serviceName: garage
+  replicas: 1
+  selector:
+    matchLabels:
+      app: garage
+  template:
+    metadata:
+      labels:
+        app: garage
+    spec:
+      containers:
+        - name: garage
+          image: dxflrs/garage:v2.4.1
+          ports:
+            - containerPort: 3900
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage.toml
+              subPath: garage.toml
+            - name: meta
+              mountPath: /var/lib/garage/meta
+            - name: data
+              mountPath: /var/lib/garage/data
+        # Same job as garage-init in compose: shares the pod's network, so the
+        # CLI reaches the node on 127.0.0.1:3901. Provisions, then idles.
+        - name: garage-init
+          image: DOCKERHUB_USER/saiddit-garage-init:IMAGE_TAG
+          command: ["/bin/sh", "-c", "/bin/sh /init.sh && exec sleep infinity"]
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: backend-secret
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage.toml
+              subPath: garage.toml
+            - name: meta
+              mountPath: /var/lib/garage/meta
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: garage-config
+  volumeClaimTemplates:
+    - metadata:
+        name: meta
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 256Mi
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
