@@ -58,4 +58,8 @@ curl -i http://saiddit.localhost/api/docs
 
 Open http://saiddit.localhost in the browser.
 
+Uploaded images are served by Garage's website endpoint through the same
+ingress, at `http://saiddit.web.garage.localhost/<key>`. Browsers resolve
+`*.localhost` to loopback on their own; for curl, `curl -H 'Host: saiddit.web.garage.localhost' http://localhost/<key>`.
+
 Manual deploy without Jenkins: `k8s/render.sh <dockerhub-user> latest | kubectl apply -f -`.

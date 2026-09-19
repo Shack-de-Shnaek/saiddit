@@ -38,3 +38,15 @@ spec:
                 name: frontend
                 port:
                   number: 80
+    # Uploaded files. Garage picks the bucket from the Host header, so the
+    # host itself has to be <bucket>.web.garage.localhost.
+    - host: saiddit.web.garage.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: garage
+                port:
+                  number: 3902

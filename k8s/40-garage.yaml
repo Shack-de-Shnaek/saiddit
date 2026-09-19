@@ -21,6 +21,13 @@ stringData:
     api_bind_addr = "[::]:3900"
     root_domain = ".s3.garage.localhost"
 
+    # Serves website-enabled buckets anonymously by Host header:
+    # <bucket>.web.garage.localhost. The ingress routes browsers here.
+    [s3_web]
+    bind_addr = "[::]:3902"
+    root_domain = ".web.garage.localhost"
+    index = "index.html"
+
     [admin]
     api_bind_addr = "[::]:3903"
     admin_token = "decf182593f92e325c99b244723e6d8545e865fc2c7cfaf66f724bdcb46ad421"
@@ -36,6 +43,8 @@ spec:
   ports:
     - name: s3
       port: 3900
+    - name: web
+      port: 3902
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -58,6 +67,7 @@ spec:
           image: dxflrs/garage:v2.4.1
           ports:
             - containerPort: 3900
+            - containerPort: 3902
           volumeMounts:
             - name: config
               mountPath: /etc/garage.toml

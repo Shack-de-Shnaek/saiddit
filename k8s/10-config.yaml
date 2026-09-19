@@ -35,7 +35,11 @@ data:
   REDIS_URL: redis://redis:6379/0
   AWS_STORAGE_BUCKET_NAME: saiddit
   AWS_S3_REGION_NAME: garage
+  # The backend talks to garage in-cluster; browsers get public URLs on the
+  # website endpoint instead, which the ingress exposes under this host.
   AWS_S3_ENDPOINT_URL: http://garage:3900
+  AWS_S3_CUSTOM_DOMAIN: saiddit.web.garage.localhost
+  AWS_S3_URL_PROTOCOL: "http:"
 ---
 apiVersion: v1
 kind: Secret
