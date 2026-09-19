@@ -1,6 +1,7 @@
 # The Garage image ships a single static binary and no shell, so the CLI is
 # lifted into an image that has one and can run the provisioning script.
-FROM dxflrs/garage:v2.4.1 AS garage
+ARG GARAGE_VERSION=v2.4.1
+FROM dxflrs/garage:${GARAGE_VERSION} AS garage
 
 FROM alpine:3.22
 

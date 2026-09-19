@@ -230,7 +230,7 @@ STORAGES = {
             'endpoint_url': os.environ['AWS_S3_ENDPOINT_URL'],
             # Garage serves buckets path-style (http://host:3900/<bucket>/...);
             # virtual-host style would need wildcard DNS for <bucket>.<host>.
-            'addressing_style': 'path',
+            'addressing_style': os.environ.get('AWS_S3_ADDRESSING_STYLE', 'path'),
             'signature_version': 's3v4',
             'querystring_auth': True,
             'file_overwrite': False,

@@ -9,7 +9,7 @@ kind cluster (namespace `saiddit`) with the new tag.
 
 ```sh
 kind create cluster --config k8s/kind/cluster.yaml
-kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
+kubectl apply -f k8s/kind/ingress-nginx.yaml
 kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s
 kind get kubeconfig --internal --name saiddit > /tmp/kind-internal.kubeconfig
 ```

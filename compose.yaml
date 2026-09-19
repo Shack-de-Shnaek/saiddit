@@ -39,7 +39,8 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-saiddit}
       AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-garage}
-      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://garage:3900}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://garage.localhost:3900}
+      AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE:-path}
     volumes:
       - ./backend:/app
     ports:
@@ -96,22 +97,39 @@ services:
       retries: 10
 
   garage:
-    image: dxflrs/garage:v2.4.1
+    image: dxflrs/garage:${GARAGE_VERSION:-v2.4.1}
     volumes:
       - ./garage.toml:/etc/garage.toml:ro
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
+    environment:
+      # Kept out of garage.toml so the committed config holds no secrets.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set it in .env}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set it in .env}
+    # Presigned URLs are signed against the endpoint's host, so the browser
+    # has to reach garage under the same name the backend used. This alias
+    # resolves to the container inside the compose network, and *.localhost
+    # resolves to loopback on the host, where the port below is published.
+    networks:
+      default:
+        aliases:
+          - garage.localhost
+    # Container-side ports are fixed by the bind addresses in garage.toml;
+    # only where they surface on the host is configurable.
     ports:
-      - "3900:3900" # S3 API
-      - "3901:3901" # RPC
-      - "3902:3902" # S3 web
-      - "3903:3903" # admin API
+      - "${GARAGE_S3_PORT:-3900}:3900" # S3 API
+      - "${GARAGE_RPC_PORT:-3901}:3901" # RPC
+      - "${GARAGE_WEB_PORT:-3902}:3902" # S3 web
+      - "${GARAGE_ADMIN_PORT:-3903}:3903" # admin API
 
   # One-shot: gives the garage node a role, then creates the bucket and key
   # the backend uses. Idempotent, so it runs on every `up` and exits.
   garage-init:
     build:
       context: ./garage-init
+      args:
+        # The CLI has to be the same build as the node it talks to.
+        GARAGE_VERSION: ${GARAGE_VERSION:-v2.4.1}
     # Shares garage's network namespace, so the CLI finds the node on
     # 127.0.0.1:3901 the way garage.toml declares it.
     network_mode: "service:garage"
@@ -121,6 +139,8 @@ services:
       # into its metadata directory.
       - garage_meta:/var/lib/garage/meta:ro
     environment:
+      # The CLI authenticates with the same secret the node runs with.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set it in .env}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-GK000000000000000000000000}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-saiddit}
