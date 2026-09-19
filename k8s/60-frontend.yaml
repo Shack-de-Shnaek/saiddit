@@ -16,7 +16,8 @@ metadata:
   name: frontend
   namespace: saiddit
 spec:
-  replicas: 2
+  # No replicas: the HorizontalPodAutoscaler below owns the count, and a
+  # fixed value here would reset it on every apply.
   selector:
     matchLabels:
       app: frontend
@@ -30,8 +31,35 @@ spec:
           image: DOCKERHUB_USER/saiddit-frontend:IMAGE_TAG
           ports:
             - containerPort: 80
+          # The HPA measures CPU as a percentage of this request.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
           readinessProbe:
             httpGet:
               path: /
               port: 80
             periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend
+  namespace: saiddit
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -39,8 +39,13 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME:-saiddit}
       AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME:-garage}
-      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://garage.localhost:3900}
+      AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://garage:3900}
       AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE:-path}
+      # Public base URL for stored files. Locally that is garage's website
+      # endpoint, which serves the bucket anonymously; in a cluster, point it
+      # at whatever ingress or CDN fronts the bucket.
+      AWS_S3_CUSTOM_DOMAIN: ${AWS_S3_CUSTOM_DOMAIN:-${AWS_STORAGE_BUCKET_NAME:-saiddit}.web.garage.localhost:${GARAGE_WEB_PORT:-3902}}
+      AWS_S3_URL_PROTOCOL: ${AWS_S3_URL_PROTOCOL:-http:}
     volumes:
       - ./backend:/app
     ports:
@@ -106,14 +111,6 @@ services:
       # Kept out of garage.toml so the committed config holds no secrets.
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set it in .env}
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set it in .env}
-    # Presigned URLs are signed against the endpoint's host, so the browser
-    # has to reach garage under the same name the backend used. This alias
-    # resolves to the container inside the compose network, and *.localhost
-    # resolves to loopback on the host, where the port below is published.
-    networks:
-      default:
-        aliases:
-          - garage.localhost
     # Container-side ports are fixed by the bind addresses in garage.toml;
     # only where they surface on the host is configurable.
     ports:
@@ -147,6 +144,9 @@ services:
       # Layout the single local node is given.
       GARAGE_ZONE: ${GARAGE_ZONE:-dc1}
       GARAGE_CAPACITY: ${GARAGE_CAPACITY:-1G}
+      # Serve the bucket anonymously over the website endpoint, so stored
+      # files have public URLs that need no signature.
+      GARAGE_BUCKET_PUBLIC: ${GARAGE_BUCKET_PUBLIC:-true}
     depends_on:
       garage:
         condition: service_started

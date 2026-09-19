@@ -52,4 +52,5 @@ EXPOSE 8000
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "--chdir", "src", "--bind", "0.0.0.0:8000", "saiddit.wsgi:application"]
+# 2 processes x 2 threads (gthread worker) = 4 requests in flight per container.
+CMD ["gunicorn", "--chdir", "src", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "2", "saiddit.wsgi:application"]

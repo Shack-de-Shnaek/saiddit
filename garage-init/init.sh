@@ -52,4 +52,13 @@ fi
 # Granting rights that are already granted changes nothing.
 garage bucket allow --read --write --owner "$AWS_STORAGE_BUCKET_NAME" --key "$AWS_ACCESS_KEY_ID"
 
+# Website mode is what lets anonymous readers fetch objects, which is how the
+# browser gets an unsigned, environment-independent URL for an upload.
+if [ "${GARAGE_BUCKET_PUBLIC:-true}" = "true" ]; then
+    echo "garage-init: exposing ${AWS_STORAGE_BUCKET_NAME} publicly"
+    garage bucket website --allow "$AWS_STORAGE_BUCKET_NAME"
+else
+    echo "garage-init: leaving ${AWS_STORAGE_BUCKET_NAME} private"
+fi
+
 echo "garage-init: ready — ${AWS_STORAGE_BUCKET_NAME} is writable by ${AWS_ACCESS_KEY_ID}"

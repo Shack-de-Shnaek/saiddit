@@ -227,7 +227,15 @@ STORAGES = {
             'secret_key': os.environ['AWS_SECRET_ACCESS_KEY'],
             'bucket_name': os.environ['AWS_STORAGE_BUCKET_NAME'],
             'region_name': os.environ['AWS_S3_REGION_NAME'],
+            # How the backend itself reaches the store (an internal address:
+            # a compose service, a k8s Service, or a real S3 endpoint).
             'endpoint_url': os.environ['AWS_S3_ENDPOINT_URL'],
+            # Host the browser fetches files from -- Garage's website endpoint
+            # locally, an ingress or CDN in a cluster. Unset falls back to
+            # presigned URLs against endpoint_url, which only work where that
+            # address resolves.
+            'custom_domain': os.environ.get('AWS_S3_CUSTOM_DOMAIN') or None,
+            'url_protocol': os.environ.get('AWS_S3_URL_PROTOCOL', 'https:'),
             # Garage serves buckets path-style (http://host:3900/<bucket>/...);
             # virtual-host style would need wildcard DNS for <bucket>.<host>.
             'addressing_style': os.environ.get('AWS_S3_ADDRESSING_STYLE', 'path'),
