@@ -1,5 +1,3 @@
-from typing import Literal
-
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import Http404
@@ -9,7 +7,8 @@ from ninja.errors import HttpError
 from ninja.pagination import paginate
 from ninja.security import django_auth
 
-from posts.models import Post, PostVote, user_vote_type
+from posts.api import PostSort, post_page
+from posts.models import Post
 from posts.schemas import PostCreateSchema, PostDetailSchema, PostListSchema
 
 from space.models import Space, SpaceMembership
@@ -33,13 +32,6 @@ def visible_spaces(user):
     return Space.objects.filter(
         Q(is_private=False) | Q(memberships__user=user)
     ).distinct()
-
-
-POST_ORDERING = {
-    'new': '-created_at',
-    'old': 'created_at',
-    'votes': '-score',
-}
 
 
 @router.get('/', response=list[SpaceListSchema], auth=None)
@@ -115,18 +107,9 @@ def delete_space(request, slug: str):
 
 @router.get('/{slug}/posts', response=list[PostListSchema], auth=None)
 @paginate
-def list_space_posts(request, slug: str, sort: Literal['new', 'old', 'votes'] = 'new'):
+def list_space_posts(request, slug: str, sort: PostSort = 'new'):
     space = get_object_or_404(visible_spaces(request.user), slug=slug)
-
-    # PostManager annotates score, which the 'votes' sort relies on.
-    # Images come back with the page rather than one query per post.
-    posts = (
-        space.posts.select_related('author', 'space')
-        .prefetch_related('images')
-        .annotate(my_vote=user_vote_type(PostVote, 'post', request.user))
-    )
-    # Ties on score fall back to newest, then id, so paging stays stable.
-    return posts.order_by(POST_ORDERING[sort], '-created_at', '-pk')
+    return post_page(space.posts.all(), request.user, sort)
 
 
 @router.post('/{slug}/posts', response={201: PostDetailSchema}, auth=django_auth)

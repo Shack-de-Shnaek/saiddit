@@ -5,8 +5,10 @@ import { LogIn, LogOut, Lock, Plus, Users } from '@lucide/vue'
 import spaceService from '@/services/spaceService'
 import { parseApiError } from '@/lib/apiError'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import { usePostList } from '@/composables/usePostList'
 import { useUserStore } from '@/stores/user'
 import PostListItem from '@/components/posts/PostListItem.vue'
+import PostSortSelect from '@/components/posts/PostSortSelect.vue'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,12 +26,20 @@ const space = ref(null)
 const spaceError = ref('')
 const loadingSpace = ref(true)
 
-const posts = ref([])
-const page = ref(0)
-const total = ref(0)
-const loadingPosts = ref(false)
-const exhausted = ref(false)
-const postsError = ref('')
+// Paging and sorting live in the composable; the sort is read at fetch time,
+// so switching it starts the listing again from page 1.
+const {
+  posts,
+  sort,
+  total,
+  loading: loadingPosts,
+  exhausted,
+  error: postsError,
+  loadMore: loadMorePosts,
+  reset: resetPosts,
+} = usePostList(({ sort: order, page }) =>
+  spaceService.listSpacePosts(props.slug, { sort: order, page }),
+)
 
 // The sentinel below the list; seeing it is what asks for the next page.
 const sentinel = ref(null)
@@ -45,31 +55,6 @@ async function loadSpace() {
     spaceError.value = parseApiError(error, 'That space could not be loaded.').detail
   } finally {
     loadingSpace.value = false
-  }
-}
-
-async function loadMorePosts() {
-  if (loadingPosts.value || exhausted.value || spaceError.value) return
-
-  loadingPosts.value = true
-  postsError.value = ''
-  const next = page.value + 1
-
-  try {
-    const { items, count } = await spaceService.listSpacePosts(props.slug, { page: next })
-
-    page.value = next
-    total.value = count
-    posts.value.push(...items)
-
-    // An empty page, or having them all, means there is nothing left to ask for.
-    if (items.length === 0 || posts.value.length >= count) exhausted.value = true
-  } catch (error) {
-    postsError.value = parseApiError(error, 'Could not load any more posts.').detail
-    // Stop the observer from retrying the same failing page on every scroll.
-    exhausted.value = true
-  } finally {
-    loadingPosts.value = false
   }
 }
 
@@ -129,17 +114,15 @@ async function onLeave() {
   }
 }
 
-function reset() {
+async function reset() {
   space.value = null
   membershipError.value = ''
-  posts.value = []
-  page.value = 0
-  total.value = 0
-  exhausted.value = false
-  postsError.value = ''
 
-  loadSpace()
-  loadMorePosts()
+  await loadSpace()
+
+  // No point asking for posts of a space that did not load; its listing would
+  // only fail the same way and report the error twice.
+  if (!spaceError.value) await resetPosts()
 }
 
 useInfiniteScroll(sentinel, loadMorePosts)
@@ -208,7 +191,13 @@ watch(() => props.slug, reset)
       </CardContent>
     </Card>
 
-    <template v-if="!spaceError">
+    <!-- Posts only start loading once the space itself has. -->
+    <template v-if="space">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-sm font-medium text-muted-foreground">Posts</h2>
+        <PostSortSelect v-model="sort" />
+      </div>
+
       <PostListItem v-for="post in posts" :key="post.id" :post="post" />
 
       <!-- Only meaningful once the first page has settled. -->

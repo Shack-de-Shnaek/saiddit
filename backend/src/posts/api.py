@@ -1,3 +1,5 @@
+from typing import Literal
+
 from django.contrib.contenttypes.models import ContentType
 from django import forms
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -18,11 +20,38 @@ from posts.schemas import (
     CommentVoteSchema,
     PostDetailSchema,
     PostImageSchema,
+    PostListSchema,
     PostVoteSchema,
     VoteSchema,
 )
 
 router = Router()
+
+# How a post listing may be sorted, and the column each choice orders on.
+# 'votes' leans on the score PostManager annotates.
+PostSort = Literal['new', 'old', 'votes']
+
+POST_ORDERING = {
+    'new': '-created_at',
+    'old': 'created_at',
+    'votes': '-score',
+}
+
+
+def post_page(queryset, user, sort):
+    """A post queryset ready to be paged and serialized as PostListSchema.
+
+    Author, space and images come back with the page rather than one query per
+    post, and the caller's own vote is annotated instead of resolved per row.
+    """
+    return (
+        queryset.select_related('author', 'space')
+        .prefetch_related('images')
+        .annotate(my_vote=user_vote_type(PostVote, 'post', user))
+        # Ties on score fall back to newest, then id, so paging stays stable.
+        .order_by(POST_ORDERING[sort], '-created_at', '-pk')
+    )
+
 
 # Bounds on an upload; a post is a handful of pictures, not an album.
 MAX_POST_IMAGES = 10
@@ -89,6 +118,22 @@ def comments_under(parent, user=None):
         )
         .order_by('-created_at', '-pk')
     )
+
+
+@router.get('/feed', response=list[PostListSchema], auth=None)
+@paginate
+def list_feed(request, sort: PostSort = 'new'):
+    """The home feed: posts from the spaces the caller belongs to.
+
+    A guest has no memberships to read, so they get the public spaces instead
+    of an empty page. Spaceless posts (their space was deleted) are left out.
+    """
+    if request.user.is_authenticated:
+        posts = Post.objects.filter(space__memberships__user=request.user)
+    else:
+        posts = Post.objects.filter(space__is_private=False)
+
+    return post_page(posts, request.user, sort)
 
 
 @router.get('/{post_id}', response={200: PostDetailSchema}, auth=None)

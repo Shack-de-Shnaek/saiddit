@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Button } from '@/components/ui/button'
 import SpaceSearch from '@/components/layout/SpaceSearch.vue'
+import ThemeToggle from '@/components/layout/ThemeToggle.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -18,6 +19,8 @@ async function onLogout() {
     <RouterLink to="/" class="text-lg font-bold">saiddit</RouterLink>
 
     <SpaceSearch />
+
+    <ThemeToggle />
 
     <!-- Nothing until the current user resolves, so the button can't flip. -->
     <template v-if="userStore.loaded">

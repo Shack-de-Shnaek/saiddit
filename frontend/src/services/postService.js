@@ -5,6 +5,15 @@ import api from './api'
 // and resolve to { items, count }. Each comment carries reply_count; its
 // replies are fetched with listReplies.
 const postService = {
+    // The home feed: posts from the spaces the signed-in user belongs to, or
+    // from the public spaces for a guest. sort is 'new', 'old' or 'votes'.
+    async listFeed({ sort = 'new', page = 1, pageSize } = {}) {
+        const { data } = await api.get('/api/posts/feed', {
+            params: { sort, page, page_size: pageSize },
+        })
+        return data
+    },
+
     async getPost(postId) {
         const { data } = await api.get(`/api/posts/${postId}`)
         return data
