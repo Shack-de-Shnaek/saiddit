@@ -13,6 +13,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - kind
+    environment:
+      # Frontend API base URL, baked into the bundle by the Jenkinsfile.
+      API_URL: ${API_URL:?set API_URL, e.g. http://saiddit.localhost}
     restart: unless-stopped
 
 volumes:

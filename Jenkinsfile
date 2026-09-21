@@ -13,9 +13,10 @@ pipeline {
         timestamps()
     }
 
+    // API_URL comes from the Jenkins process environment (set on the container
+    // in jenkins/compose.yaml). Vite bakes it into the bundle, so it must be the
+    // host the Ingress serves.
     environment {
-        // Vite bakes this into the bundle; it's the host the Ingress serves.
-        API_URL = 'http://saiddit.localhost'
         IMAGES = 'backend frontend garage-init'
     }
 
@@ -27,6 +28,7 @@ pipeline {
                 }
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_TOKEN')]) {
                     sh '''
+                        : "${API_URL:?API_URL is not set in the Jenkins environment}"
                         docker build --target hosting -t "$DOCKERHUB_USER/saiddit-backend:$TAG" backend
                         docker build --target hosting --build-arg VITE_API_URL="$API_URL" -t "$DOCKERHUB_USER/saiddit-frontend:$TAG" frontend
                         docker build -t "$DOCKERHUB_USER/saiddit-garage-init:$TAG" garage-init

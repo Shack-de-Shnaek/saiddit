@@ -34,7 +34,7 @@ services:
       target: hosting
       args:
         # Baked into the bundle at build time; the runtime environment is ignored.
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: ${API_URL:?set API_URL}
     command: !reset null
     working_dir: !reset null
     environment: !reset {}

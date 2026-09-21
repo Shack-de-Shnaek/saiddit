@@ -8,6 +8,12 @@ set -eu
 
 cd "$(dirname "$0")"
 
+# jenkins/compose.yaml reads API_URL from here; keep an existing one as is.
+if [ ! -f jenkins/.env ]; then
+    cp jenkins/.env_example jenkins/.env
+    echo '==> created jenkins/.env from jenkins/.env_example'
+fi
+
 cluster=saiddit
 ctx="kind-$cluster"
 kubeconfig=/tmp/kind-internal.kubeconfig

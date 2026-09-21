@@ -5,7 +5,8 @@ Every push to `master` (polled every ~2 min) builds `saiddit-backend`,
 `<user>/saiddit-<name>:<short-sha>` and `:latest`, then applies `k8s/` to the
 kind cluster (namespace `saiddit`) with the new tag.
 
-`./setup.sh` (repo root) runs every command in steps 1 and 2 and prints the
+`./setup.sh` (repo root) runs every command in steps 1 and 2 (creating
+`jenkins/.env` from `jenkins/.env_example` if it doesn't exist) and prints the
 admin password; only the Jenkins UI steps are left to do by hand. It is safe
 to re-run.
 
@@ -28,6 +29,7 @@ are fixed at one replica and have no autoscaler.
 ## 2. Jenkins
 
 ```sh
+cp -n jenkins/.env_example jenkins/.env   # API_URL: the host the Ingress serves
 docker compose -f jenkins/compose.yaml up -d --build
 docker compose -f jenkins/compose.yaml exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
